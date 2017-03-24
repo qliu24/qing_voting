@@ -11,7 +11,7 @@ load('./ilsvrc_2012_mean.mat');
 addpath('/media/zzs/SSD1TB/zzs/modified/caffe/matlab');
 model = '/media/zzs/SSD1TB/zzs/surgeried/VGG_ILSVRC_16_layers_deploy_pool5.prototxt';
 weights = '/media/zzs/SSD1TB/zzs/surgeried/surgery_weight';
-mean_pixel = mean(mean(image_mean, 1), 2);
+mean_pixel = mean(mean(mean_data, 1), 2);
 Caffe.cpu_id = 1;
 caffe.reset_all();
 
