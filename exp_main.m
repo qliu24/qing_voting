@@ -29,7 +29,7 @@ for i = 1:numel(object)
 
     %% from training and testing dataset, we want to get Visual Concept
     % first step is to extract features from images at a certain layer
-    fprintf('dictionary_nowarp');
-    dictionary_nowarp(config);
-
+    % fprintf('dictionary_nowarp');
+    % dictionary_nowarp(config);
 end
+
