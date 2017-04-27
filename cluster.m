@@ -10,11 +10,11 @@ end
 addpath('/media/zzs/SSD1TB/zzs/library/vlfeat/toolbox/');
 vl_setup();
 
-save_path = sprintf(Dictionary.original_dir, 'all2',layer_name, cluster_num);
+save_path = sprintf(Dictionary.original_dir, category, layer_name, cluster_num);
 try
     assert(exist(save_path, 'file')>0)
 catch
-    load(sprintf(Dictionary.feature_cache_dir, 'all2', layer_name));
+    load(sprintf(Dictionary.feature_cache_dir, category, layer_name));
 
     % L2 normalization as preprocessing
     feat_norm = sqrt(sum(feat_set_all.^2, 1)); %#ok<*NODEF>

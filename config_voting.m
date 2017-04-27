@@ -1,7 +1,7 @@
 %% configuration file of visual concept project
 
 %% main parameter settings
-global category layer_name GPU_id
+global category layer_name GPU_id cluster_num
 
 
 dataset_suffix = 'mergelist_rand';
@@ -28,7 +28,6 @@ Dataset.test_list =  fullfile(Data.gt_dir, ['%s_' sprintf('%s_test.txt', dataset
 
 % where to save dictionary
 Dictionary.feature_cache_dir = '/media/zzs/4TB/qing_intermediate/dictionary_imagenet_%s_vgg16_%s_nowarp.mat';
-cluster_num = 512;
 Dictionary.original_dir = '/media/zzs/4TB/qing_intermediate/dictionary_imagenet_%s_vgg16_%s_K%d_norm_nowarp.mat';
 Dictionary.new_dir = '/media/zzs/4TB/qing_intermediate/dictionary_imagenet_%s_vgg16_%s_K%d_norm_nowarp_prune_512.mat';
 

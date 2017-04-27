@@ -50,3 +50,23 @@ VC.res_info = '/media/zzs/4TB/qing_intermediate/all_K216_res_info/res_info_%s_%s
 save(sprintf(VC.res_info, category, set_type), 'res_info', '-v7.3');
 
 end % end of function
+
+qin@semantic-All-Series:~/voting/qing_voting$ cat matrixDist.m 
+function result = matrixDist(data, dictionary)
+% data: K * N
+% dictionary: K * M
+% result M * N
+%% method 1
+temp = bsxfun(@plus, sum(data.^2, 1), sum(dictionary.^2, 1)');
+result = temp - 2*dictionary'*data;
+
+% %% method 2 for comparison
+% [K, N] = size(data);
+% [K, M] = size(dictionary);
+% result = zeros(M, N);
+% for n = 1:N
+%     error = sum(bsxfun(@minus, data(:, n), dictionary).^2, 1);
+%     result(:, n) = error';
+% end
+
+end

@@ -6,18 +6,21 @@
 clear
 close all
 
-global category layer_name GPU_id
+global category layer_name GPU_id cluster_num
 
 object = {'car', 'aeroplane', 'bicycle', 'bus', 'motorbike', 'train'};
 
 config = 'config_voting';
 GPU_id = 0;
+layer_name = 'pool3'; % set the layer of interest
+cluster_num = 256;
 
+% parameters
+samp_size = 200; % number of patches per image in dictionary_nowarp
 
 %% script begins
 for i = 1:numel(object)
     category = object{i}; % set the object of interest
-    layer_name = 'pool4'; % set the layer of interest
 
     try
         eval(config);
@@ -29,7 +32,22 @@ for i = 1:numel(object)
 
     %% from training and testing dataset, we want to get Visual Concept
     % first step is to extract features from images at a certain layer
-    % fprintf('dictionary_nowarp');
-    % dictionary_nowarp(config);
+    fprintf('dictionary_nowarp');
+    dictionary_nowarp(config, samp_size);
 end
+
+fprintf('merge_all_cat_dict');
+merge_all_cat_dict(config, samp_size);
+
+category = 'all';
+
+fprintf('cluster');
+cluster(config);
+fprintf('pruning');
+pruning(config);
+
+
+
+
+
 

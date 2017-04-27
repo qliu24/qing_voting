@@ -1,4 +1,4 @@
-function dictionary_nowarp(config_file)
+function dictionary_nowarp(config_file, samp_size)
 % This script extracts cnn features and patches for kmeans clustering
 % instead of warping to 224*224 which destroys the aspect ratio
 % I resize the short size to 224 while keeping the aspect ratio
@@ -8,8 +8,6 @@ try
 catch
     keyboard
 end
-% parameters
-samp_size = 100; % number of patches per image
 
 % training dataset
 imgDir = sprintf(Dataset.img_dir, category);
