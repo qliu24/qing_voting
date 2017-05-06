@@ -1,6 +1,6 @@
 % Evaluate voting model for object detection
 
-function evalVotingModelForObjectDetection(config)
+function evalVotingModelForObjectDetection_all(config)
 try
     eval(config)
 catch
@@ -12,9 +12,9 @@ fprintf('Evaluate voting models for object detection task on "%s" set ...\n', se
 % read image list
 switch set_type
     case 'train'
-        file_list = sprintf(Dataset.train_list, category);
+        file_list = sprintf(Dataset.train_list, model_category);
     case 'test'
-        file_list = sprintf(Dataset.test_list, category);
+        file_list = sprintf(Dataset.test_list, model_category);
     otherwise
         error('Error: unknown set_type');
 end
@@ -23,8 +23,8 @@ file_ids = fopen(file_list, 'r');
 img_list = textscan(file_ids, '%s %d');
 img_num = length(img_list{1});
 
-dir_img = sprintf(Dataset.img_dir, category);
-dir_obj_anno = sprintf(Dataset.anno_dir, category);
+dir_img = sprintf(Dataset.img_dir, model_category);
+dir_obj_anno = sprintf(Dataset.anno_dir, model_category);
 
                                                  
 %% process ground-truth annotations
@@ -92,36 +92,52 @@ end
 
 %% compute detection scores 
 try
-    load(file_perf_eval, 'boxes', 'scores', 'img_ids');
+    load(file_perf_eval_all, 'boxes', 'scores', 'img_ids');
 catch
 
 fprintf(' compute scores and do NMS for detection result:');
 
 % load detection result
-assert( exist(file_det_result, 'file') > 0 );
-load(file_det_result, 'det');
+assert( exist(file_det_result_all, 'file') > 0 );
+load(file_det_result_all, 'det_all');
+det_all_m = det_all;
 
-assert(length(det) == img_num);
+% assert(length(det_all) == img_num);
+img_num_all = length(det_all_m);
 assert(length(gt) == img_num);
 
-boxes = cell([img_num 1]);              % ~ boxes{n}: ~ [num_bbox 4]
-scores = cell([img_num 1]);             % ~ scores{n}: ~ [num_bbox 1]
-img_ids = cell([img_num 1]);            % ~ img_ids{n}: ~ [num_bbox 1]
+score_bg = cell([img_num_all 1]); 
+for ff=1:length(file_det_result_all_bg)
+    assert( exist(file_det_result_all_bg{ff}, 'file') > 0 );
+    load(file_det_result_all_bg{ff}, 'det_all');
+    for n = 1: img_num_all
+        score_bg{n} = [score_bg{n} det_all{n}.score];
+    end
+end
 
+boxes = cell([img_num_all 1]);              % ~ boxes{n}: ~ [num_bbox 4]
+scores = cell([img_num_all 1]);             % ~ scores{n}: ~ [num_bbox 1]
+img_ids = cell([img_num_all 1]);            % ~ img_ids{n}: ~ [num_bbox 1]
 
 Eval.nms_bbox_ratio = 0.3;
-for n = 1: img_num    
+n_obj = 0;
+for n = 1: img_num_all
     % compute scores for proposal bounding boxes
-    
-    num_bbox = size(det{n}.score, 1);
-    scores{n} = det{n}.score;
-    boxes{n} = det{n}.box;
+    num_bbox = size(det_all_m{n}.score, 1);
+    scores{n} = det_all_m{n}.score - max(score_bg{n},[],2);
+    boxes{n} = det_all_m{n}.box;
     
     % do NMS
     nms_list = nms([boxes{n}, scores{n}], Eval.nms_bbox_ratio);
     boxes{n} = boxes{n}(nms_list, :);
     scores{n} = scores{n}(nms_list);
-    img_ids{n} = n * ones([length(nms_list) 1]);
+    
+    if strcmp(det_all_m{n}.cat, model_category)
+        n_obj = n_obj+1;
+        img_ids{n} = n_obj * ones([length(nms_list) 1]);
+    else
+        img_ids{n} = 0 * ones([length(nms_list) 1]);
+    end
     
 %     valid_score_box = find(scores{n} > Eval.score_thresh);
 %     if ~isempty(valid_score_box)
@@ -135,8 +151,9 @@ for n = 1: img_num
     end
 end % n: image index
 fprintf('\n');
+assert(n_obj==img_num);
 
-save(file_perf_eval, 'boxes', 'scores', 'img_ids', '-v7.3');
+save(file_perf_eval_all, 'boxes', 'scores', 'img_ids', '-v7.3');
 
 end
 
@@ -170,43 +187,47 @@ for d = 1: nd
     
     % find ground truth image
     i = img_ids(d);   % i: image id
-
-    % assign detection to ground truth object if any
-    bb = boxes(:, d);
-    ovmax = -inf;
-    jmax = [];
-    for j = 1: size(gt(i).bbox, 2)
-        bbgt = gt(i).bbox(:, j);
-        bi = [max(bb(1), bbgt(1)); max(bb(2), bbgt(2)); min(bb(3), bbgt(3)); min(bb(4), bbgt(4))];   % intersection
-        iw = bi(3) - bi(1) + 1;
-        ih = bi(4) - bi(2) + 1;
-        if (iw > 0) && (ih > 0)                
-            % compute overlap as area of intersection / area of union
-            ua = (bb(3) - bb(1) + 1) * (bb(4) - bb(2) + 1) + ...
-                 (bbgt(3) - bbgt(1) + 1) * (bbgt(4) - bbgt(2) + 1) - ...
-                  iw * ih;    % area of union
-            ov = iw * ih / ua;
-            if ov > ovmax
-                ovmax = ov;
-                jmax = j;
-            end
-        end
-    end
     
-    % assign detection as true positive/don't care/false positive
-    if ovmax >= Eval.ov_thresh
-        if ~gt(i).diff(jmax)
-            if ~gt(i).det(jmax)
-                tp(d) = 1;            % true positive
-                gt(i).det(jmax) = true;
-            else
-                fp(d) = 1;            % false positive (multiple/duplicate detection)
-            end
-        end
+    if i == 0
+        fp(d) = 1;
     else
-        fp(d)=1;                    % false positive
-    end
-    
+        
+        % assign detection to ground truth object if any
+        bb = boxes(:, d);
+        ovmax = -inf;
+        jmax = [];
+        for j = 1: size(gt(i).bbox, 2)
+            bbgt = gt(i).bbox(:, j);
+            bi = [max(bb(1), bbgt(1)); max(bb(2), bbgt(2)); min(bb(3), bbgt(3)); min(bb(4), bbgt(4))];   % intersection
+            iw = bi(3) - bi(1) + 1;
+            ih = bi(4) - bi(2) + 1;
+            if (iw > 0) && (ih > 0)                
+                % compute overlap as area of intersection / area of union
+                ua = (bb(3) - bb(1) + 1) * (bb(4) - bb(2) + 1) + ...
+                     (bbgt(3) - bbgt(1) + 1) * (bbgt(4) - bbgt(2) + 1) - ...
+                      iw * ih;    % area of union
+                ov = iw * ih / ua;
+                if ov > ovmax
+                    ovmax = ov;
+                    jmax = j;
+                end
+            end
+        end
+        
+        % assign detection as true positive/don't care/false positive
+        if ovmax >= Eval.ov_thresh
+            if ~gt(i).diff(jmax)
+                if ~gt(i).det(jmax)
+                    tp(d) = 1;            % true positive
+                    gt(i).det(jmax) = true;
+                else
+                    fp(d) = 1;            % false positive (multiple/duplicate detection)
+                end
+            end
+        else
+            fp(d)=1;                    % false positive
+        end
+    end % if i == 0
 end % d: detection
 
 % compute precision/recall
@@ -218,7 +239,7 @@ prec = tp ./ (fp + tp);
 ap = VOCap(rec, prec);
 fprintf(' AP = %2.1f', 100 * ap);
 
-save(file_perf_eval, 'fp', 'tp', 'rec', 'prec', 'ap', '-append');
+save(file_perf_eval_all, 'fp', 'tp', 'rec', 'prec', 'ap', '-append');
 
 Eval.vis_prc = true;
 if Eval.vis_prc
